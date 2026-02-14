@@ -49,6 +49,157 @@
     padding: 0;
 }
 
+/* Password Gate */
+.password-gate {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #FFE4E1 0%, #FFF0F3 50%, #FFE4E1 100%);
+    z-index: 99999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 0.8s ease, visibility 0.8s ease;
+}
+
+.password-gate.unlocked {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.password-content {
+    text-align: center;
+    max-width: 400px;
+    padding: 40px;
+    animation: bounceIn 0.8s ease;
+}
+
+.falafel-container {
+    margin-bottom: 30px;
+}
+
+.falafel-img {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 10px 40px rgba(233, 30, 99, 0.3);
+    animation: falafelBounce 2s ease-in-out infinite;
+    border: 4px solid white;
+    filter: blur(8px) grayscale(60%) brightness(0.4);
+    transition: filter 0.8s ease;
+}
+
+.falafel-img.revealed {
+    filter: blur(0) grayscale(0) brightness(1);
+}
+
+@keyframes falafelBounce {
+    0%, 100% { transform: scale(1) rotate(0deg); }
+    25% { transform: scale(1.05) rotate(-3deg); }
+    50% { transform: scale(1) rotate(0deg); }
+    75% { transform: scale(1.05) rotate(3deg); }
+}
+
+.falafel-img.loading {
+    animation: falafelSpin 1s linear infinite;
+}
+
+@keyframes falafelSpin {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.1); }
+    100% { transform: rotate(360deg) scale(1); }
+}
+
+.password-title {
+    font-family: var(--font-script);
+    font-size: 2.5rem;
+    color: var(--color-text-primary);
+    margin-bottom: 15px;
+    text-shadow: 2px 2px 4px rgba(255, 107, 157, 0.3);
+}
+
+.password-hint {
+    font-size: 1.1rem;
+    color: var(--color-text-secondary);
+    margin-bottom: 30px;
+    font-style: italic;
+}
+
+.password-input-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+}
+
+.password-input {
+    width: 100%;
+    max-width: 280px;
+    padding: 15px 25px;
+    font-size: 1.2rem;
+    font-family: var(--font-primary);
+    border: 3px solid var(--color-accent-rose);
+    border-radius: 50px;
+    background: white;
+    color: var(--color-text-primary);
+    text-align: center;
+    outline: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(233, 30, 99, 0.2);
+}
+
+.password-input:focus {
+    border-color: var(--color-btn-yes);
+    box-shadow: 0 6px 20px rgba(233, 30, 99, 0.4);
+    transform: scale(1.02);
+}
+
+.password-input.error {
+    border-color: #f44336;
+    animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-10px); }
+    75% { transform: translateX(10px); }
+}
+
+.btn-password {
+    padding: 15px 40px;
+    font-size: 1.2rem;
+    font-family: var(--font-primary);
+    font-weight: 700;
+    color: white;
+    background: linear-gradient(45deg, var(--color-accent-rose), var(--color-btn-yes));
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(233, 30, 99, 0.4);
+    transition: all 0.3s ease;
+}
+
+.btn-password:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 25px rgba(233, 30, 99, 0.6);
+}
+
+.password-error {
+    color: #f44336;
+    font-weight: 600;
+    margin-top: 15px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.password-error.visible {
+    opacity: 1;
+}
+
 /* Custom Cursor */
 body {
     cursor: none;
@@ -450,6 +601,22 @@ body {
     </style>
 </head>
 <body>
+    <!-- Password Gate -->
+    <div class="password-gate" id="passwordGate">
+        <div class="password-content">
+            <div class="falafel-container">
+                <img src="falafel.png" alt="Falafel" class="falafel-img" id="falafelImg">
+            </div>
+            <h2 class="password-title">Secret Valentine Access 🔐</h2>
+            <p class="password-hint">Hint: It's crispy, delicious, and from the Middle East... 🧆</p>
+            <div class="password-input-container">
+                <input type="password" id="passwordInput" class="password-input" placeholder="Enter secret word..." autocomplete="off">
+                <button id="passwordBtn" class="btn-password">Unlock 💕</button>
+            </div>
+            <p class="password-error" id="passwordError">Nope! Try again... think yummy & fried! 😋</p>
+        </div>
+    </div>
+
     <!-- Custom Cursor -->
     <div class="custom-cursor" id="cursor">💕</div>
     <div class="cursor-trail" id="cursorTrail"></div>
@@ -545,7 +712,76 @@ let state = {
 
 let audioState = { synth: null, isMuted: true, bgLoop: null };
 
+// ========================================
+// Password Gate 🔐
+// ========================================
+const CORRECT_PASSWORD = 'falafel';
+
+function initPasswordGate() {
+    const passwordGate = document.getElementById('passwordGate');
+    const passwordInput = document.getElementById('passwordInput');
+    const passwordBtn = document.getElementById('passwordBtn');
+    const passwordError = document.getElementById('passwordError');
+    const falafelImg = document.getElementById('falafelImg');
+    
+    if (!passwordGate || !passwordInput || !passwordBtn) {
+        console.error('Password gate elements not found!');
+        init(); // Start main app anyway
+        return;
+    }
+    
+    // Focus input on load
+    passwordInput.focus();
+    
+    // Check password function
+    function checkPassword() {
+        const entered = passwordInput.value.toLowerCase().trim();
+        console.log('Checking password:', entered);
+        
+        if (entered === CORRECT_PASSWORD) {
+            // Correct! Reveal falafel and show loading animation
+            console.log('Password correct! Unlocking...');
+            falafelImg.classList.add('revealed');
+            setTimeout(() => falafelImg.classList.add('loading'), 400);
+            passwordBtn.textContent = 'Unlocking... 🔓';
+            passwordBtn.disabled = true;
+            passwordError.classList.remove('visible');
+            
+            // Unlock after short delay
+            setTimeout(() => {
+                passwordGate.classList.add('unlocked');
+                console.log('Gate unlocked!');
+                // Start main app
+                init();
+            }, 1500);
+        } else {
+            // Wrong password
+            console.log('Wrong password!');
+            passwordInput.classList.add('error');
+            passwordError.classList.add('visible');
+            passwordInput.value = '';
+            passwordInput.focus();
+            
+            // Remove error after animation
+            setTimeout(() => {
+                passwordInput.classList.remove('error');
+            }, 500);
+        }
+    }
+    
+    // Event listeners
+    passwordBtn.addEventListener('click', checkPassword);
+    passwordInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') checkPassword();
+    });
+    passwordInput.addEventListener('input', () => {
+        passwordError.classList.remove('visible');
+    });
+}
+
+// ========================================
 // Initialization
+// ========================================
 function init() {
     createFloatingHearts();
     setupEventListeners();
@@ -820,8 +1056,7 @@ function handleResize() {
     }
 }
 
-// Start
-document.addEventListener('DOMContentLoaded', init);
+
 
 // Secret codes
 document.addEventListener('keydown', (e) => {
@@ -842,6 +1077,9 @@ document.addEventListener('keypress', (e) => {
 
 console.log('%c💕 Happy Valentine\'s Day! 💕', 'font-size: 24px; color: #E91E63; font-weight: bold;');
 console.log('%cSecret Codes: Ctrl+Shift+Y = Force Yes | Type LOVE = Confetti', 'font-size: 12px; color: #666;');
+
+// Start with password gate
+document.addEventListener('DOMContentLoaded', initPasswordGate);
     </script>
 </body>
 </html>
